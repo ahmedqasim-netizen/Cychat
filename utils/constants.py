@@ -1,0 +1,8 @@
+from app.config import (
+    settings,
+)
+
+
+JWT_SECRET_KEY = settings.JWT_SECRET_KEY
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 360
