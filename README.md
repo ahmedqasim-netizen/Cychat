@@ -12,6 +12,8 @@ Cychat is a self-hosted messaging platform that supports:
 - **Contact management**
 
 The backend runs on FastAPI with SQL Server, and the frontend is plain HTML/CSS/JavaScript—no build step required.
+<img width="1582" height="857" alt="Design_Architecture" src="https://github.com/user-attachments/assets/fdaecb0e-4dc1-4471-97d5-1b1b2d8575e0" />
+<img width="1217" height="755" alt="Database_Design" src="https://github.com/user-attachments/assets/160472cd-906f-4ee9-8657-7ccc0e928db2" />
 
 ## Tech Stack
 
