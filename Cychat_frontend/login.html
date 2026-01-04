@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cy Chat - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="static/js/e2e-crypto.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md">
+        <!-- Logo Section -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Cy Chat</h1>
+            <p class="text-sky-100">Secure messaging platform</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="glass-effect rounded-3xl shadow-2xl p-8">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Welcome Back</h2>
+                <p class="text-slate-500 text-sm mt-1">Sign in to continue to your account</p>
+            </div>
+
+            <!-- Error Alert -->
+            <div id="error-alert" class="hidden mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div class="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span id="error-message" class="text-red-700 text-sm font-medium"></span>
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label for="email" class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                            </svg>
+                        </div>
+                        <input type="email" id="email" name="username" required
+                            class="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all bg-slate-50 focus:bg-white"
+                            placeholder="you@example.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-slate-700 mb-2">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <input type="password" id="password" name="password" required
+                            class="w-full pl-12 pr-12 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all bg-slate-50 focus:bg-white"
+                            placeholder="••••••••">
+                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-4 flex items-center">
+                            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 hover:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500">
+                        <span class="ml-2 text-sm text-slate-600">Remember me</span>
+                    </label>
+                    <a href="#" class="text-sm text-sky-600 hover:text-sky-700 font-medium">Forgot password?</a>
+                </div>
+
+                <button type="submit" id="login-btn"
+                    class="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold py-3 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                    <span>Sign In</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </form>
+
+            <!-- Divider -->
+            <div class="my-6 flex items-center">
+                <div class="flex-1 border-t border-slate-200"></div>
+                <span class="px-4 text-sm text-slate-400">or</span>
+                <div class="flex-1 border-t border-slate-200"></div>
+            </div>
+
+            <!-- Register Link -->
+            <div class="text-center">
+                <p class="text-slate-600">Don't have an account?</p>
+                <a href="register.html" class="inline-flex items-center gap-2 mt-2 text-sky-600 hover:text-sky-700 font-semibold transition-colors">
+                    <span>Create Account</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-sky-100 text-sm mt-6">
+            Secured by <span class="font-semibold">Cy-Server</span> • SQL Server Edition
+        </p>
+        <p class="text-center text-sky-200 text-xs mt-2 opacity-75">
+            💡 To test multiple users, use different browsers or incognito windows
+        </p>
+    </div>
+
+<script>
+    // API Base URL - Update this to match your backend
+    const API_BASE = 'http://localhost:8000/api/v1';
+
+    // Toggle password visibility
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = document.getElementById('eye-icon');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            `;
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.innerHTML = `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            `;
+        }
+    }
+
+    // Show error message
+    function showError(message) {
+        const errorAlert = document.getElementById('error-alert');
+        const errorMessage = document.getElementById('error-message');
+        errorMessage.textContent = message;
+        errorAlert.classList.remove('hidden');
+    }
+
+    // Hide error message
+    function hideError() {
+        document.getElementById('error-alert').classList.add('hidden');
+    }
+
+    // Handle login form submission
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError();
+
+        const loginBtn = document.getElementById('login-btn');
+        const originalContent = loginBtn.innerHTML;
+        
+        // Show loading state
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = `
+            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Signing in...</span>
+        `;
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            // OAuth2 password flow requires form data
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.access_token) {
+                // Store token and user info
+                localStorage.setItem('access_token', data.access_token);
+                localStorage.setItem('token_type', data.token_type || 'bearer');
+                
+                // Initialize E2E encryption keys (generates if not exists)
+                try {
+                    loginBtn.innerHTML = `
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Setting up encryption...</span>
+                    `;
+                    
+                    const { publicKey, isNew } = await E2ECrypto.initialize();
+                    
+                    // If keys were newly generated, upload public key to server
+                    if (isNew) {
+                        await fetch(`${API_BASE}/user/public-key`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${data.access_token}`
+                            },
+                            body: JSON.stringify({ public_key: publicKey })
+                        });
+                        console.log('E2E encryption keys generated for existing user');
+                    } else {
+                        // Check if server has our public key, if not upload it
+                        const keyResponse = await fetch(`${API_BASE}/user/public-key`, {
+                            headers: {
+                                'Authorization': `Bearer ${data.access_token}`
+                            }
+                        });
+                        const keyData = await keyResponse.json();
+                        
+                        if (!keyData.public_key || keyData.public_key !== publicKey) {
+                            await fetch(`${API_BASE}/user/public-key`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${data.access_token}`
+                                },
+                                body: JSON.stringify({ public_key: publicKey })
+                            });
+                            console.log('Public key synced with server');
+                        }
+                    }
+                } catch (cryptoError) {
+                    console.error('E2E encryption setup error:', cryptoError);
+                    // Continue to chat even if crypto fails
+                }
+                
+                // Redirect to chat page
+                window.location.href = 'chat.html';
+            } else {
+                showError(data.detail || data.message || 'Invalid email or password');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            showError('Connection failed. Please check if the server is running.');
+        } finally {
+            // Reset button state
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = originalContent;
+        }
+    });
+
+    // Check URL for logout parameter
+    function checkLogout() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('logout') === 'true') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('token_type');
+            // Clear the URL parameter
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return true;
+        }
+        return false;
+    }
+
+    // On page load - just check for logout, NO auto-login
+    window.onload = () => {
+        // If logout was requested, clear the token
+        checkLogout();
+        // Always stay on login page - user must click Sign In
+    };
+</script>
+</body>
+</html>

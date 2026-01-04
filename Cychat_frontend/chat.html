@@ -1,0 +1,2530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cy Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="static/js/e2e-crypto.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .message-bubble {
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        
+        .typing-indicator span {
+            animation: typing 1.4s infinite;
+            animation-fill-mode: both;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+        
+        .sidebar-item.active {
+            background-color: rgb(224 242 254);
+            border-left: 3px solid rgb(14 165 233);
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out forwards;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <div class="flex overflow-hidden h-screen w-screen">
+        <!-- Sidebar -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col shadow-lg">
+            <!-- Header -->
+            <div class="p-5 bg-sky-600 text-white shadow-md flex justify-between items-center">
+                <h1 class="text-xl font-bold italic tracking-tight">Cy Chat</h1>
+                <div class="flex gap-2">
+                    <button onclick="openAddContactModal()" class="hover:bg-sky-700 p-1.5 rounded-full transition" title="Add Contact">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                    </button>
+                    <button onclick="openCreateRoomModal()" class="hover:bg-sky-700 p-1.5 rounded-full transition" title="Create/Join Room">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="p-3 border-b border-slate-100">
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Search contacts or rooms..." 
+                        class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                        oninput="handleSearch(this.value)">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Contacts List -->
+            <div class="flex-1 overflow-y-auto">
+                <!-- Rooms Section -->
+                <div class="p-3">
+                    <div class="flex items-center justify-between mb-2 px-2">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Rooms</h3>
+                        <span id="rooms-count" class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">0</span>
+                    </div>
+                    <div id="rooms-list" class="space-y-1">
+                        <!-- Rooms will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="px-4"><hr class="border-slate-100"></div>
+
+                <!-- Contacts Section -->
+                <div class="p-3">
+                    <div class="flex items-center justify-between mb-2 px-2">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Direct Messages</h3>
+                        <span id="contacts-count" class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">0</span>
+                    </div>
+                    <div id="contacts-list" class="space-y-1">
+                        <!-- Contacts will be loaded here -->
+                    </div>
+                </div>
+
+                <div class="px-4"><hr class="border-slate-100"></div>
+
+                <!-- Message Requests Section -->
+                <div class="p-3" id="message-requests-section">
+                    <div class="flex items-center justify-between mb-2 px-2">
+                        <h3 class="text-xs font-bold text-orange-500 uppercase tracking-widest">Message Requests</h3>
+                        <span id="requests-count" class="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">0</span>
+                    </div>
+                    <div id="requests-list" class="space-y-1">
+                        <!-- Message requests will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-3 border-t border-slate-100 bg-slate-50">
+                <div class="flex items-center gap-3">
+                    <a href="profile.html" class="flex-1 flex items-center gap-2 p-2 hover:bg-slate-100 rounded-lg transition cursor-pointer">
+                        <div id="my-avatar" class="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white text-sm font-bold">
+                            ??
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p id="my-name" class="text-sm font-semibold text-slate-700 truncate">Loading...</p>
+                            <p class="text-[10px] text-green-600 font-medium">● Online</p>
+                        </div>
+                    </a>
+                    <button onclick="openSettingsModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition" title="Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="flex-1 flex flex-col bg-sky-50/30">
+            <!-- Chat Header -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center px-6 shadow-sm justify-between">
+                <div class="flex items-center gap-3">
+                    <div id="chat-avatar" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold hidden">
+                        ??
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="current-chat-name" class="font-bold text-slate-400 text-lg">Select a conversation</h2>
+                            <span id="chat-type-badge" class="hidden text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"></span>
+                        </div>
+                        <p id="chat-status" class="text-xs text-slate-400 hidden">
+                            <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                            Online
+                        </p>
+                        <!-- E2E Encryption Status -->
+                        <p id="e2e-status" class="text-xs hidden flex items-center gap-1">
+                            <svg id="e2e-lock-icon" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            <span id="e2e-status-text">End-to-end encrypted</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button id="leave-room-btn" onclick="leaveRoom()" class="hidden px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition">
+                        Leave Room
+                    </button>
+                    <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Logout">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Messages -->
+            <div id="chat-log" class="flex-1 overflow-y-auto p-6">
+                <!-- Placeholder when no chat selected -->
+                <div id="placeholder-content" class="flex flex-col items-center justify-center h-full">
+                    <div class="bg-sky-100 p-6 rounded-full mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+                    <p class="text-slate-500 font-semibold text-lg">Choose a conversation</p>
+                    <p class="text-slate-400 text-sm">Select a room or contact to start messaging</p>
+                </div>
+                
+                <!-- Messages Container -->
+                <div id="messages-container" class="hidden space-y-4">
+                    <!-- Messages will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div id="typing-indicator" class="hidden px-6 py-2">
+                <div class="flex items-center gap-2 text-slate-500 text-sm">
+                    <div class="typing-indicator flex gap-1">
+                        <span class="w-2 h-2 bg-slate-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-slate-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-slate-400 rounded-full"></span>
+                    </div>
+                    <span id="typing-user">Someone is typing...</span>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <footer class="p-4 bg-white border-t border-slate-200">
+                <form id="message-form" class="flex items-center gap-3">
+                    <label id="attachment-btn" class="p-2 text-slate-300 rounded-lg transition cursor-not-allowed" title="Select a chat first">
+                        <input type="file" id="file-input" class="hidden" onchange="handleFileUpload(event)" disabled
+                            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.py,.js,.ts,.html,.css,.json,.xml,.yaml,.yml,.md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                    </label>
+                    <div class="flex-1 relative">
+                        <input type="text" id="message-input" 
+                            placeholder="Type a message..." 
+                            class="w-full px-4 py-3 bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-sky-500 transition"
+                            disabled>
+                    </div>
+                    <button type="submit" id="send-btn" 
+                        class="bg-sky-500 hover:bg-sky-600 disabled:bg-slate-300 text-white p-3 rounded-xl transition shadow-md disabled:shadow-none"
+                        disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </form>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Add Contact Modal -->
+    <div id="add-contact-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="p-6 bg-sky-600 text-white">
+                <h3 class="text-lg font-bold">Add New Contact</h3>
+                <p class="text-sky-100 text-sm">Enter the nickname of the user you want to add</p>
+            </div>
+            <form id="add-contact-form" class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Nickname</label>
+                    <input type="text" id="contact-nickname" required
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500"
+                        placeholder="Enter user's nickname">
+                </div>
+                <div id="contact-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAddContactModal()" 
+                        class="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                        class="flex-1 px-4 py-2.5 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition font-medium">
+                        Add Contact
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create/Join Room Modal -->
+    <div id="create-room-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="p-6 bg-sky-600 text-white">
+                <h3 class="text-lg font-bold">Create or Join Room</h3>
+                <p class="text-sky-100 text-sm">Enter a room name to create or join</p>
+            </div>
+            <form id="create-room-form" class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Room Name</label>
+                    <input type="text" id="room-name" required maxlength="50"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500"
+                        placeholder="general-chat">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Description (optional)</label>
+                    <input type="text" id="room-description"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500"
+                        placeholder="A place to chat about anything">
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="join-existing" class="w-4 h-4 text-sky-600 rounded">
+                        <span class="text-sm text-slate-700">Join existing room</span>
+                    </label>
+                </div>
+                <div id="room-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm"></div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeCreateRoomModal()" 
+                        class="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                        class="flex-1 px-4 py-2.5 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition font-medium">
+                        Create/Join
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+    // Configuration
+    const API_BASE = 'http://localhost:8000/api/v1';
+    const WS_BASE = 'ws://localhost:8000/api/v1';
+    
+    // State
+    let currentUser = null;
+    let currentChat = null; // { type: 'contact'|'room', id, name }
+    let websocket = null;
+    let contacts = [];
+    let rooms = [];
+    let messageRequests = []; // Users who sent messages but aren't contacts
+    let messageRequestsInterval = null; // Polling interval for message requests
+    
+    // E2E Encryption state
+    let publicKeysCache = {}; // Cache of user public keys: { odId: publicKey }
+    let e2eEnabled = true; // Global toggle for E2E encryption
+    const PUBLIC_KEYS_STORAGE = 'e2e_public_keys_cache'; // localStorage key for persistent public keys
+
+    // IMPORTANT: Always use string keys for publicKeysCache to avoid type mismatch issues
+    function toKeyId(id) {
+        return String(id);
+    }
+
+    // Get public key from cache with consistent ID type
+    function getPublicKey(userId) {
+        return publicKeysCache[toKeyId(userId)];
+    }
+
+    // Set public key in cache with consistent ID type
+    function setPublicKey(userId, publicKey) {
+        publicKeysCache[toKeyId(userId)] = publicKey;
+    }
+
+    // Load public keys from localStorage on startup
+    function loadPublicKeysFromStorage() {
+        try {
+            const stored = localStorage.getItem(PUBLIC_KEYS_STORAGE);
+            if (stored) {
+                const parsedKeys = JSON.parse(stored);
+                // Normalize all keys to strings
+                publicKeysCache = {};
+                for (const [id, key] of Object.entries(parsedKeys)) {
+                    publicKeysCache[toKeyId(id)] = key;
+                }
+                console.log('Loaded', Object.keys(publicKeysCache).length, 'public keys from storage');
+            }
+        } catch (e) {
+            console.error('Error loading public keys from storage:', e);
+            // Clear corrupted cache
+            publicKeysCache = {};
+        }
+    }
+
+    // Save public keys to localStorage
+    function savePublicKeysToStorage() {
+        try {
+            localStorage.setItem(PUBLIC_KEYS_STORAGE, JSON.stringify(publicKeysCache));
+        } catch (e) {
+            console.error('Error saving public keys to storage:', e);
+        }
+    }
+
+    // Auth helpers
+    function getToken() {
+        return localStorage.getItem('access_token');
+    }
+
+    function getAuthHeaders() {
+        return {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+        };
+    }
+
+    // Toast notification system
+    function showToast(message, type = 'info') {
+        // Remove existing toast if any
+        const existingToast = document.getElementById('toast-notification');
+        if (existingToast) existingToast.remove();
+
+        const colors = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-amber-500',
+            info: 'bg-sky-500'
+        };
+
+        const icons = {
+            success: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>`,
+            error: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>`,
+            warning: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>`,
+            info: `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>`
+        };
+
+        const toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = `fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-white ${colors[type]} animate-slide-in`;
+        toast.innerHTML = `
+            ${icons[type]}
+            <span class="font-medium">${message}</span>
+            <button onclick="this.parentElement.remove()" class="ml-2 hover:opacity-75">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Auto-remove after 4 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 4000);
+    }
+
+    // API Calls
+    async function fetchProfile() {
+        const response = await fetch(`${API_BASE}/user/profile`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch profile');
+        return await response.json();
+    }
+
+    async function fetchContacts() {
+        const response = await fetch(`${API_BASE}/contacts`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch contacts');
+        return await response.json();
+    }
+
+    async function fetchRooms() {
+        const response = await fetch(`${API_BASE}/rooms`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch rooms');
+        return await response.json();
+    }
+
+    async function fetchMessageRequests() {
+        const response = await fetch(`${API_BASE}/message-requests`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch message requests');
+        return await response.json();
+    }
+
+    async function fetchConversation(contactEmail) {
+        const response = await fetch(`${API_BASE}/conversation?receiver=${encodeURIComponent(contactEmail)}`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch conversation');
+        return await response.json();
+    }
+
+    async function fetchRoomConversation(roomName) {
+        const response = await fetch(`${API_BASE}/room/conversation?room=${encodeURIComponent(roomName)}`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch room conversation');
+        return await response.json();
+    }
+
+    // ============= E2E Encryption Functions =============
+    
+    /**
+     * Fetch public key for a user and cache it (both in memory and localStorage)
+     */
+    async function fetchUserPublicKey(userId, forceRefresh = false) {
+        const keyId = toKeyId(userId);
+        // Return cached key unless force refresh
+        if (!forceRefresh && getPublicKey(keyId)) {
+            console.log('Using cached public key for user:', userId);
+            return getPublicKey(keyId);
+        }
+        
+        try {
+            console.log('Fetching public key from server for user:', userId);
+            const response = await fetch(`${API_BASE}/user/${userId}/public-key`, {
+                headers: getAuthHeaders()
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.public_key) {
+                    setPublicKey(keyId, data.public_key);
+                    savePublicKeysToStorage(); // Persist to localStorage
+                    console.log('Public key fetched and cached for user:', userId);
+                    return data.public_key;
+                } else {
+                    console.warn('Server returned no public key for user:', userId);
+                }
+            } else {
+                console.error('Failed to fetch public key, status:', response.status);
+            }
+        } catch (error) {
+            console.error(`Failed to fetch public key for user ${userId}:`, error);
+        }
+        return null;
+    }
+
+    /**
+     * Fetch public keys for multiple users
+     */
+    async function fetchPublicKeysForUsers(userIds) {
+        const missingIds = userIds.filter(id => !getPublicKey(id));
+        
+        if (missingIds.length > 0) {
+            console.log('Fetching public keys for', missingIds.length, 'users');
+            try {
+                const response = await fetch(`${API_BASE}/users/public-keys`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(missingIds)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.keys) {
+                        let count = 0;
+                        for (const [id, info] of Object.entries(data.keys)) {
+                            if (info.public_key) {
+                                setPublicKey(id, info.public_key);
+                                count++;
+                            }
+                        }
+                        console.log('Fetched', count, 'public keys');
+                        savePublicKeysToStorage(); // Persist to localStorage
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch public keys:', error);
+            }
+        }
+    }
+
+    /**
+     * Get cache key for E2E encryption between two users
+     */
+    function getE2ECacheKey(userId1, userId2) {
+        return [userId1, userId2].sort().join('_');
+    }
+
+    /**
+     * Check if E2E encryption is available for current chat
+     */
+    function isE2EAvailable() {
+        if (!e2eEnabled || !currentChat) return false;
+        
+        const hasMyKeys = E2ECrypto.hasKeys();
+        if (!hasMyKeys) return false;
+        
+        if (currentChat.type === 'room') {
+            // For rooms, check if we have the room key
+            return E2ECrypto.hasRoomKey(currentChat.name);
+        }
+        
+        // For direct chats, check if we have the other person's public key
+        const theirKey = getPublicKey(currentChat.id);
+        return !!theirKey;
+    }
+
+    /**
+     * Encrypt a message for the current chat recipient
+     */
+    async function encryptMessageForChat(plaintext) {
+        console.log('Encrypting message, isE2EAvailable:', isE2EAvailable());
+        if (!isE2EAvailable()) {
+            console.log('E2E not available, sending plaintext');
+            return { encrypted: false, content: plaintext };
+        }
+        
+        try {
+            let encrypted;
+            if (currentChat.type === 'room') {
+                // Use room key for encryption
+                console.log('Encrypting for room:', currentChat.name);
+                const roomKey = await E2ECrypto.getRoomKey(currentChat.name);
+                console.log('Got room key for encryption:', !!roomKey);
+                encrypted = await E2ECrypto.encryptForRoom(plaintext, currentChat.name);
+            } else {
+                // Use ECDH shared key for direct messages
+                const theirPublicKey = getPublicKey(currentChat.id);
+                console.log('Encrypting for user:', currentChat.id, 'Has key:', !!theirPublicKey);
+                const cacheKey = getE2ECacheKey(currentUser.id, currentChat.id);
+                encrypted = await E2ECrypto.encryptFor(plaintext, theirPublicKey, cacheKey);
+            }
+            
+            // Add prefix to mark as encrypted
+            const prefixedContent = addEncryptionPrefix(encrypted);
+            console.log('Message encrypted with prefix, length:', prefixedContent?.length);
+            return { encrypted: true, content: prefixedContent };
+        } catch (error) {
+            console.error('Encryption failed:', error);
+            return { encrypted: false, content: plaintext };
+        }
+    }
+
+    /**
+     * Decrypt a message from a sender (for direct messages)
+     */
+    async function decryptMessageFromSender(ciphertext, otherUserId) {
+        // Check if E2E is available
+        if (!e2eEnabled) {
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        // Ensure our own keys are loaded into memory
+        if (!E2ECrypto.hasKeys()) {
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        // Load key pair into memory (important after page refresh!)
+        try {
+            await E2ECrypto.loadKeyPair();
+        } catch (e) {
+            console.error('Failed to load key pair:', e);
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        // Remove E2E: prefix
+        const actualCiphertext = removeEncryptionPrefix(ciphertext);
+        if (!actualCiphertext || actualCiphertext.length < 20) {
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        // Always fetch fresh public key to ensure we have the latest
+        const keyId = toKeyId(otherUserId);
+        let theirPublicKey = getPublicKey(keyId);
+        
+        if (!theirPublicKey) {
+            theirPublicKey = await fetchUserPublicKey(otherUserId, true);
+            if (!theirPublicKey) {
+                console.warn('Cannot get public key for user:', otherUserId);
+                return { decrypted: false, content: ciphertext };
+            }
+        }
+        
+        // Clear any cached derived key to force fresh derivation
+        const cacheKey = getE2ECacheKey(currentUser.id, otherUserId);
+        
+        try {
+            const decrypted = await E2ECrypto.decryptFrom(actualCiphertext, theirPublicKey, cacheKey);
+            return { decrypted: true, content: decrypted };
+        } catch (error) {
+            // Retry with fresh key from server
+            E2ECrypto.clearDerivedKey(cacheKey);
+            theirPublicKey = await fetchUserPublicKey(otherUserId, true);
+            
+            if (theirPublicKey) {
+                try {
+                    const decrypted = await E2ECrypto.decryptFrom(actualCiphertext, theirPublicKey, cacheKey);
+                    return { decrypted: true, content: decrypted };
+                } catch (e) {
+                    // Decryption truly failed - likely key mismatch
+                }
+            }
+            return { decrypted: false, content: ciphertext };
+        }
+    }
+
+    /**
+     * Decrypt a message from a room
+     */
+    async function decryptRoomMessage(ciphertext, roomName) {
+        if (!e2eEnabled || !E2ECrypto.hasKeys()) {
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        // Load key pair into memory (important after page refresh!)
+        try {
+            await E2ECrypto.loadKeyPair();
+        } catch (e) {
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        // Ensure room key is loaded from localStorage
+        let roomKey = await E2ECrypto.getRoomKey(roomName);
+        if (!roomKey) {
+            // Try to fetch from server
+            await initializeRoomKey(roomName);
+            roomKey = await E2ECrypto.getRoomKey(roomName);
+        }
+        
+        if (!roomKey) {
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        // Remove E2E: prefix
+        const actualCiphertext = removeEncryptionPrefix(ciphertext);
+        if (!actualCiphertext || actualCiphertext.length < 20) {
+            return { decrypted: false, content: ciphertext };
+        }
+        
+        try {
+            const decrypted = await E2ECrypto.decryptFromRoom(actualCiphertext, roomName);
+            return { decrypted: true, content: decrypted };
+        } catch (error) {
+            return { decrypted: false, content: ciphertext };
+        }
+    }
+
+    // Prefix used to mark encrypted messages
+    const E2E_MESSAGE_PREFIX = 'E2E:';
+
+    /**
+     * Check if a message is encrypted (has E2E prefix)
+     */
+    function isEncryptedMessage(content) {
+        if (!content) return false;
+        return content.startsWith(E2E_MESSAGE_PREFIX);
+    }
+
+    /**
+     * Add encryption prefix to a message
+     */
+    function addEncryptionPrefix(encryptedContent) {
+        return E2E_MESSAGE_PREFIX + encryptedContent;
+    }
+
+    /**
+     * Remove encryption prefix from a message
+     */
+    function removeEncryptionPrefix(content) {
+        if (content && content.startsWith(E2E_MESSAGE_PREFIX)) {
+            return content.substring(E2E_MESSAGE_PREFIX.length);
+        }
+        return content;
+    }
+
+    /**
+     * Legacy check if a string looks like an encrypted message (base64)
+     * Used for messages sent before the prefix was added
+     */
+    function looksEncrypted(content) {
+        if (!content || content.length < 20) return false;
+        // Check for new prefix format first
+        if (content.startsWith(E2E_MESSAGE_PREFIX)) return true;
+        // Legacy: Base64 pattern with minimum length (IV + ciphertext)
+        return /^[A-Za-z0-9+/]+=*$/.test(content) && content.length > 30;
+    }
+
+    /**
+     * Fetch and decrypt the room key for a room
+     * @returns {boolean} Whether we successfully got/have the room key
+     */
+    async function initializeRoomKey(roomName) {
+        console.log('=== Initializing room key for:', roomName, '===');
+        
+        // First, try to load directly from localStorage (most reliable)
+        try {
+            const localKey = await E2ECrypto.getRoomKey(roomName);
+            if (localKey) {
+                console.log('✓ Room key loaded from localStorage');
+                return true;
+            }
+            console.log('No room key in localStorage');
+        } catch (error) {
+            console.warn('Error loading room key from localStorage:', error);
+        }
+
+        if (!E2ECrypto.hasKeys()) {
+            console.warn('No local E2E keys - cannot decrypt room key');
+            return false;
+        }
+
+        // Try to fetch the encrypted room key from server
+        try {
+            console.log('Fetching room key from server...');
+            const response = await fetch(`${API_BASE}/room/encryption/key?room_name=${encodeURIComponent(roomName)}`, {
+                headers: getAuthHeaders()
+            });
+
+            if (!response.ok) {
+                console.warn('Failed to fetch room key:', response.status);
+                return false;
+            }
+
+            const data = await response.json();
+            console.log('Server response:', data);
+            
+            if (!data.encrypted_room_key) {
+                console.log('No room key on server for room:', roomName);
+                return false;
+            }
+
+            if (!data.key_provider_public_key) {
+                console.warn('No key provider public key - cannot decrypt');
+                return false;
+            }
+
+            // Decrypt the room key using the key provider's public key
+            console.log('Decrypting room key from provider:', data.key_provider_id);
+            const roomKeyBase64 = await E2ECrypto.decryptRoomKey(
+                data.encrypted_room_key,
+                data.key_provider_public_key
+            );
+            console.log('Room key decrypted successfully');
+
+            // Import and store the room key
+            const roomKey = await E2ECrypto.importRoomKey(roomKeyBase64);
+            await E2ECrypto.storeRoomKey(roomName, roomKey);
+            
+            console.log('✓ Room key stored in localStorage');
+            return true;
+        } catch (error) {
+            console.error('Error fetching/decrypting room key:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Check if any room member already has a room key (so we can get it from them)
+     */
+    async function checkIfRoomKeyExists(roomName) {
+        try {
+            const response = await fetch(`${API_BASE}/room/encryption/members?room_name=${encodeURIComponent(roomName)}`, {
+                headers: getAuthHeaders()
+            });
+
+            if (!response.ok) return false;
+
+            const data = await response.json();
+            const members = data.members || [];
+            
+            // Check if any member (other than us) already has a room key
+            return members.some(m => m.id !== currentUser.id && m.has_room_key);
+        } catch (error) {
+            console.error('Error checking room key existence:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Generate a new room key and store it encrypted for ourselves
+     * Called when we are the first to need encryption in a room
+     */
+    async function generateAndStoreRoomKey(roomName) {
+        console.log('=== Generating Room Key for:', roomName, '===');
+        
+        if (!E2ECrypto.hasKeys()) {
+            console.warn('No local keys - cannot generate room key');
+            return false;
+        }
+
+        // First check if another member already has a room key
+        // If so, we should wait for them to distribute it to us
+        const keyExistsElsewhere = await checkIfRoomKeyExists(roomName);
+        console.log('Key exists with another member:', keyExistsElsewhere);
+        if (keyExistsElsewhere) {
+            console.log('Room key exists with another member - waiting for distribution');
+            return false;
+        }
+
+        try {
+            // Generate a new room key
+            console.log('Generating new AES-256 room key...');
+            const roomKey = await E2ECrypto.generateRoomKey();
+            const roomKeyBase64 = await E2ECrypto.exportRoomKey(roomKey);
+            console.log('Room key generated, base64 length:', roomKeyBase64.length);
+            
+            // Store locally FIRST (this is the important part)
+            console.log('Storing room key in localStorage...');
+            await E2ECrypto.storeRoomKey(roomName, roomKey);
+            
+            // Verify it was stored
+            const stored = E2ECrypto.getRoomKeyBase64(roomName);
+            console.log('Verified stored in localStorage:', !!stored, stored?.length);
+            
+            // Encrypt for ourselves using our own public key
+            const myPublicKey = E2ECrypto.getStoredPublicKey();
+            console.log('Encrypting for self, public key length:', myPublicKey?.length);
+            const encryptedForSelf = await E2ECrypto.encryptRoomKeyForUser(roomKeyBase64, myPublicKey);
+            console.log('Encrypted for self, length:', encryptedForSelf?.length);
+            
+            // Upload to server
+            console.log('Uploading encrypted key to server...');
+            const response = await fetch(`${API_BASE}/room/encryption/key`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    room_name: roomName,
+                    encrypted_room_key: encryptedForSelf
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Failed to upload room key:', response.status, errorText);
+                return false;
+            }
+
+            console.log('✓ Room key uploaded to server successfully');
+            
+            // Distribute to other members
+            await distributeRoomKeyToMembers(roomName, roomKeyBase64);
+            
+            console.log('=== Room Key Generation Complete ===');
+            return true;
+        } catch (error) {
+            console.error('Error generating room key:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Distribute room key to all members who don't have it yet
+     */
+    async function distributeRoomKeyToMembers(roomName, roomKeyBase64) {
+        try {
+            // Get list of room members
+            const response = await fetch(`${API_BASE}/room/encryption/members?room_name=${encodeURIComponent(roomName)}`, {
+                headers: getAuthHeaders()
+            });
+
+            if (!response.ok) {
+                console.error('Failed to fetch room members');
+                return;
+            }
+
+            const data = await response.json();
+            const members = data.members || [];
+
+            // Distribute to members who don't have the key yet
+            for (const member of members) {
+                if (member.id === currentUser.id) continue; // Skip self
+                if (member.has_room_key) continue; // Already has key
+                if (!member.public_key) {
+                    console.warn('Member has no public key:', member.nickname);
+                    continue;
+                }
+
+                try {
+                    // Encrypt room key for this member
+                    const encryptedForMember = await E2ECrypto.encryptRoomKeyForUser(roomKeyBase64, member.public_key);
+                    
+                    // Upload to server
+                    await fetch(`${API_BASE}/room/encryption/distribute`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({
+                            room_name: roomName,
+                            target_user_id: member.id,
+                            encrypted_room_key: encryptedForMember
+                        })
+                    });
+                    
+                    console.log('Distributed room key to:', member.nickname);
+                } catch (error) {
+                    console.error('Failed to distribute key to:', member.nickname, error);
+                }
+            }
+        } catch (error) {
+            console.error('Error distributing room keys:', error);
+        }
+    }
+
+    /**
+     * Update the E2E encryption status indicator in the UI
+     */
+    function updateE2EStatus() {
+        const statusEl = document.getElementById('e2e-status');
+        const lockIcon = document.getElementById('e2e-lock-icon');
+        const statusText = document.getElementById('e2e-status-text');
+        
+        if (!currentChat) {
+            statusEl.classList.add('hidden');
+            return;
+        }
+        
+        statusEl.classList.remove('hidden');
+        
+        if (isE2EAvailable()) {
+            // E2E is available (works for both rooms and direct chats now)
+            statusEl.classList.remove('text-slate-400', 'text-amber-500');
+            statusEl.classList.add('text-green-600');
+            lockIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />`;
+            if (currentChat.type === 'room') {
+                statusText.textContent = 'Room encrypted';
+            } else {
+                statusText.textContent = 'End-to-end encrypted';
+            }
+        } else {
+            // E2E not available - determine why
+            statusEl.classList.remove('text-green-600');
+            
+            const hasMyKeys = E2ECrypto.hasKeys();
+            
+            if (currentChat.type === 'room') {
+                const hasRoomKey = E2ECrypto.hasRoomKey(currentChat.name);
+                if (!hasMyKeys) {
+                    statusEl.classList.add('text-amber-500');
+                    lockIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />`;
+                    statusText.textContent = 'Your keys missing - re-login';
+                } else if (!hasRoomKey) {
+                    statusEl.classList.add('text-amber-500');
+                    lockIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />`;
+                    statusText.textContent = 'Room key not available';
+                } else {
+                    statusEl.classList.add('text-slate-400');
+                    lockIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />`;
+                    statusText.textContent = 'Encryption unavailable';
+                }
+            } else {
+                // Direct chat
+                statusEl.classList.add('text-amber-500');
+                lockIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />`;
+                
+                const theirKey = getPublicKey(currentChat.id);
+                
+                if (!hasMyKeys) {
+                    statusText.textContent = 'Your keys missing - re-login';
+                } else if (!theirKey) {
+                    statusText.textContent = 'Contact needs to re-login';
+                } else {
+                    statusText.textContent = 'Encryption unavailable';
+                }
+            }
+        }
+    }
+
+    // WebSocket management
+    function connectWebSocket(type, targetId) {
+        if (websocket) {
+            websocket.close();
+        }
+
+        let wsUrl;
+        if (type === 'room') {
+            wsUrl = `${WS_BASE}/ws/${currentUser.id}/${targetId}`;
+        } else {
+            wsUrl = `${WS_BASE}/ws/chat/${currentUser.id}/${targetId}`;
+        }
+
+        websocket = new WebSocket(wsUrl);
+
+        websocket.onopen = () => {
+            console.log('WebSocket connected');
+            enableMessageInput();
+        };
+
+        websocket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            handleWebSocketMessage(data);
+        };
+
+        websocket.onclose = () => {
+            console.log('WebSocket disconnected');
+            disableMessageInput();
+        };
+
+        websocket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }
+
+    async function handleWebSocketMessage(data) {
+        console.log('WS Message:', data);
+        
+        if (data.type === 'online' || data.type === 'offline') {
+            updateUserStatus(data);
+            return;
+        }
+
+        // Handle all message types: text, media, and file
+        if (data.type === 'text' || data.type === 'media' || data.type === 'file') {
+            // Attempt to decrypt text messages if encrypted
+            if (data.type === 'text' && data.content) {
+                const shouldTryDecrypt = data.encrypted || isEncryptedMessage(data.content) || looksEncrypted(data.content);
+                
+                if (shouldTryDecrypt) {
+                    if (currentChat?.type === 'room') {
+                        // Decrypt room message
+                        console.log('Decrypting incoming room message');
+                        const result = await decryptRoomMessage(data.content, currentChat.name);
+                        data.content = result.content;
+                        data.wasEncrypted = result.decrypted;
+                    } else {
+                        // Decrypt direct message
+                        const otherUserId = currentChat?.id;
+                        if (otherUserId) {
+                            // Ensure we have the other user's public key BEFORE decryption
+                            if (!getPublicKey(otherUserId)) {
+                                console.log('Fetching public key for decryption, user:', otherUserId);
+                                await fetchUserPublicKey(otherUserId);
+                            }
+                            console.log('Decrypting incoming direct message');
+                            const result = await decryptMessageFromSender(data.content, otherUserId);
+                            data.content = result.content;
+                            data.wasEncrypted = result.decrypted;
+                        }
+                    }
+                }
+            }
+            appendMessage(data);
+        }
+    }
+
+    async function sendMessage(content, type = 'text', media = '') {
+        if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket not connected');
+            return;
+        }
+
+        let messageContent = content;
+        let isEncrypted = false;
+        
+        // Encrypt text messages when E2E is available (both direct and room chats)
+        if (type === 'text' && isE2EAvailable()) {
+            if (currentChat?.type === 'room') {
+                console.log('Encrypting message for room:', currentChat.name);
+            } else {
+                console.log('Encrypting message for contact:', currentChat.id);
+            }
+            const result = await encryptMessageForChat(content);
+            messageContent = result.content;
+            isEncrypted = result.encrypted;
+            console.log('Message encrypted:', isEncrypted);
+        } else if (type === 'text') {
+            console.log('E2E not available, sending plaintext');
+        }
+
+        const message = {
+            content: messageContent,
+            type: type,
+            media: media,
+            encrypted: isEncrypted
+        };
+
+        websocket.send(JSON.stringify(message));
+    }
+
+    // UI Helpers
+    function getInitials(name) {
+        if (!name) return '??';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    function formatTime(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function enableMessageInput() {
+        document.getElementById('message-input').disabled = false;
+        document.getElementById('send-btn').disabled = false;
+        document.getElementById('file-input').disabled = false;
+        document.getElementById('message-input').placeholder = 'Type a message...';
+        
+        // Enable attachment button
+        const attachmentBtn = document.getElementById('attachment-btn');
+        attachmentBtn.classList.remove('text-slate-300', 'cursor-not-allowed');
+        attachmentBtn.classList.add('text-slate-400', 'hover:text-sky-600', 'hover:bg-sky-50', 'cursor-pointer');
+        attachmentBtn.title = 'Send file';
+    }
+
+    function disableMessageInput() {
+        document.getElementById('message-input').disabled = true;
+        document.getElementById('send-btn').disabled = true;
+        document.getElementById('file-input').disabled = true;
+        document.getElementById('message-input').placeholder = 'Select a conversation to start messaging';
+        
+        // Disable attachment button
+        const attachmentBtn = document.getElementById('attachment-btn');
+        attachmentBtn.classList.remove('text-slate-400', 'hover:text-sky-600', 'hover:bg-sky-50', 'cursor-pointer');
+        attachmentBtn.classList.add('text-slate-300', 'cursor-not-allowed');
+        attachmentBtn.title = 'Select a chat first';
+    }
+
+    // Render functions
+    function renderContacts() {
+        const container = document.getElementById('contacts-list');
+        document.getElementById('contacts-count').textContent = contacts.length;
+
+        if (contacts.length === 0) {
+            container.innerHTML = `
+                <p class="text-center text-slate-400 text-sm py-4">No contacts yet</p>
+            `;
+            return;
+        }
+
+        container.innerHTML = contacts.map(contact => `
+            <div class="sidebar-item flex items-center p-3 hover:bg-sky-50 rounded-xl cursor-pointer transition group ${currentChat?.id === contact.id && currentChat?.type === 'contact' ? 'active' : ''}"
+                 onclick="selectContact(${contact.id}, '${contact.email}', '${contact.nickname || contact.email}')">
+                <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-500 group-hover:bg-sky-200 group-hover:text-sky-700 transition-colors">
+                    ${getInitials(contact.nickname || contact.email)}
+                </div>
+                <div class="ml-3 flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-700 truncate">${contact.nickname || contact.email}</p>
+                    <p class="text-[10px] text-slate-400">${contact.email}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderRooms() {
+        const container = document.getElementById('rooms-list');
+        document.getElementById('rooms-count').textContent = rooms.length;
+
+        if (rooms.length === 0) {
+            container.innerHTML = `
+                <p class="text-center text-slate-400 text-sm py-4">No rooms joined</p>
+            `;
+            return;
+        }
+
+        container.innerHTML = rooms.map(room => `
+            <div class="sidebar-item flex items-center p-3 hover:bg-sky-50 rounded-xl cursor-pointer transition group ${currentChat?.id === room.room_name && currentChat?.type === 'room' ? 'active' : ''}"
+                 onclick="selectRoom('${room.room_name}', '${room.room_name}')">
+                <span class="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center font-bold group-hover:bg-amber-200 transition-colors">#</span>
+                <div class="ml-3 flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-700 truncate">${room.room_name}</p>
+                    <p class="text-[10px] text-slate-400 truncate">${room.description || 'No description'}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderMessageRequests() {
+        const container = document.getElementById('requests-list');
+        const section = document.getElementById('message-requests-section');
+        document.getElementById('requests-count').textContent = messageRequests.length;
+
+        // Hide section if no message requests
+        if (messageRequests.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        
+        section.style.display = 'block';
+
+        container.innerHTML = messageRequests.map(request => `
+            <div class="sidebar-item flex items-center p-3 hover:bg-orange-50 rounded-xl cursor-pointer transition group ${currentChat?.id === request.id && currentChat?.type === 'request' ? 'active' : ''}"
+                 onclick="selectMessageRequest(${request.id}, '${request.email}', '${request.nickname || request.email}')">
+                <div class="relative">
+                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-sm font-bold text-orange-600 group-hover:bg-orange-200 transition-colors">
+                        ${getInitials(request.nickname || request.email)}
+                    </div>
+                    <span class="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+                        ${request.unread_count || '!'}
+                    </span>
+                </div>
+                <div class="ml-3 flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-700 truncate">${request.nickname || request.email}</p>
+                    <p class="text-[10px] text-orange-500 font-medium">New message request</p>
+                </div>
+                <button onclick="event.stopPropagation(); acceptMessageRequest(${request.id}, '${request.nickname}')" 
+                    class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition" title="Accept & Add to Contacts">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    async function renderMessages(messages, isSentByMe) {
+        const container = document.getElementById('messages-container');
+        container.innerHTML = '';
+
+        // Ensure E2E keys are loaded before attempting decryption
+        if (E2ECrypto.hasKeys()) {
+            // Load our key pair into memory
+            await E2ECrypto.loadKeyPair();
+            
+            // For direct messages, ensure we have the other user's public key
+            if (currentChat?.type !== 'room' && currentChat?.id) {
+                if (!getPublicKey(currentChat.id)) {
+                    await fetchUserPublicKey(currentChat.id);
+                }
+            }
+            // For rooms, ensure the room key is loaded
+            if (currentChat?.type === 'room' && currentChat?.name) {
+                if (!E2ECrypto.hasRoomKey(currentChat.name)) {
+                    await initializeRoomKey(currentChat.name);
+                }
+            }
+        }
+
+        // Process messages with potential decryption
+        for (const msg of messages) {
+            let content = msg.content;
+            let wasEncrypted = false;
+            
+            // Determine actual content type: use message_type from backend, fallback to checking type
+            // Backend returns: type='sent'/'received' (direction), message_type='text'/'media' (content type)
+            const contentType = msg.message_type || (msg.type === 'text' || msg.type === 'media' ? msg.type : 'text');
+            
+            // Try to decrypt text messages that have the E2E prefix or look encrypted
+            if (contentType === 'text' && content && (isEncryptedMessage(content) || looksEncrypted(content))) {
+                console.log('Attempting to decrypt message:', content.substring(0, 30) + '...');
+                if (currentChat?.type === 'room') {
+                    // Decrypt room message
+                    const result = await decryptRoomMessage(content, currentChat.name);
+                    content = result.content;
+                    wasEncrypted = result.decrypted;
+                } else {
+                    // Decrypt direct message
+                    const otherId = currentChat.id;
+                    const result = await decryptMessageFromSender(content, otherId);
+                    content = result.content;
+                    wasEncrypted = result.decrypted;
+                }
+                console.log('Decryption result:', wasEncrypted ? 'SUCCESS' : 'FAILED');
+            }
+            
+            appendMessage({
+                content: content,
+                type: contentType,
+                media: msg.media,
+                user: msg,
+                creation_date: msg.creation_date,
+                wasEncrypted: wasEncrypted
+            }, msg.type === 'sent');
+        }
+
+        scrollToBottom();
+    }
+
+    function appendMessage(data, isSent = null) {
+        const container = document.getElementById('messages-container');
+        
+        // Determine if message is sent by current user
+        if (isSent === null) {
+            isSent = data.user?.id === currentUser.id;
+        }
+
+        // Build media content - handle different file types
+        let mediaHtml = '';
+        if (data.media) {
+            let mediaUrl = data.media;
+            // If it's a relative URL starting with /, prepend the API base
+            if (mediaUrl.startsWith('/')) {
+                mediaUrl = `http://localhost:8000${mediaUrl}`;
+            }
+            
+            // Determine file category from fileInfo or URL
+            let category = data.fileInfo?.category || 'file';
+            let filename = data.fileInfo?.filename || mediaUrl.split('/').pop();
+            let fileSize = data.fileInfo?.size || 0;
+            
+            // If no category, try to detect from URL extension
+            if (category === 'file' && filename) {
+                category = getFileCategory(filename);
+            }
+            
+            if (category === 'image') {
+                mediaHtml = `
+                    <div class="relative group mb-2">
+                        <img src="${mediaUrl}" class="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition" alt="Image" onclick="openImageFullscreen('${mediaUrl}')">
+                        <a href="${mediaUrl}" download="${escapeHtml(filename)}" 
+                           class="absolute top-2 right-2 p-2 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-black/70"
+                           onclick="event.stopPropagation()" title="Download">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                        </a>
+                    </div>`;
+            } else if (category === 'video') {
+                mediaHtml = `
+                    <div class="relative group mb-2">
+                        <video src="${mediaUrl}" class="max-w-xs rounded-lg" controls></video>
+                        <a href="${mediaUrl}" download="${escapeHtml(filename)}" 
+                           class="absolute top-2 right-2 p-2 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-black/70"
+                           title="Download">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                        </a>
+                    </div>`;
+            } else if (category === 'audio') {
+                mediaHtml = `
+                    <div class="flex items-center gap-2 mb-2 p-2 ${isSent ? 'bg-sky-400/30' : 'bg-slate-100'} rounded-lg">
+                        <audio src="${mediaUrl}" class="flex-1 h-10" controls></audio>
+                        <a href="${mediaUrl}" download="${escapeHtml(filename)}" 
+                           class="p-2 ${isSent ? 'text-white hover:bg-sky-400/50' : 'text-slate-500 hover:bg-slate-200'} rounded-full transition"
+                           title="Download">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                        </a>
+                    </div>`;
+            } else {
+                // Document, archive, code, or other files - show as downloadable
+                const iconColor = isSent ? 'text-sky-100' : 'text-slate-400';
+                const bgColor = isSent ? 'bg-sky-400/30' : 'bg-slate-100';
+                const textColor = isSent ? 'text-white' : 'text-slate-700';
+                const sizeText = fileSize ? formatFileSize(fileSize) : '';
+                
+                mediaHtml = `
+                    <a href="${mediaUrl}" download="${escapeHtml(filename)}" 
+                       class="flex items-center gap-3 p-3 ${bgColor} rounded-lg mb-2 hover:opacity-80 transition group">
+                        <div class="${iconColor}">${getFileIcon(category)}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium ${textColor} truncate">${escapeHtml(filename)}</p>
+                            <p class="text-xs ${isSent ? 'text-sky-100' : 'text-slate-500'}">${sizeText} ${sizeText ? '•' : ''} ${category.charAt(0).toUpperCase() + category.slice(1)}</p>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ${iconColor} opacity-0 group-hover:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                    </a>
+                `;
+            }
+        }
+
+        const messageHtml = `
+            <div class="flex ${isSent ? 'justify-end' : 'justify-start'}">
+                <div class="message-bubble ${isSent ? 'bg-sky-500 text-white rounded-t-2xl rounded-l-2xl' : 'bg-white text-slate-700 rounded-t-2xl rounded-r-2xl shadow-sm'} px-4 py-3 max-w-md">
+                    ${!isSent && data.user?.nickname ? `<p class="text-xs font-semibold ${isSent ? 'text-sky-100' : 'text-sky-600'} mb-1">${data.user.nickname}</p>` : ''}
+                    ${mediaHtml}
+                    ${data.content ? `<p class="text-sm">${escapeHtml(data.content)}</p>` : ''}
+                    <p class="text-[10px] ${isSent ? 'text-sky-100' : 'text-slate-400'} mt-1 flex items-center gap-1">
+                        ${data.creation_date ? formatTime(data.creation_date) : 'Just now'}
+                        ${data.wasEncrypted ? `<svg class="h-3 w-3 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="End-to-end encrypted">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>` : ''}
+                    </p>
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', messageHtml);
+        scrollToBottom();
+    }
+
+    // Open image in fullscreen modal
+    function openImageFullscreen(imageUrl) {
+        const filename = imageUrl.split('/').pop();
+        const modal = document.createElement('div');
+        modal.id = 'fullscreen-image-modal';
+        modal.className = 'fixed inset-0 bg-black/90 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="absolute top-4 right-4 flex gap-2">
+                <a href="${imageUrl}" download="${filename}" 
+                   class="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition" title="Download">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </a>
+                <button id="close-fullscreen" class="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition" title="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <img src="${imageUrl}" class="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl cursor-default" alt="Full Image" onclick="event.stopPropagation()">
+        `;
+        document.body.appendChild(modal);
+
+        // Close on backdrop click
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.remove();
+        };
+        
+        // Close button
+        document.getElementById('close-fullscreen').onclick = () => modal.remove();
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function scrollToBottom() {
+        const chatLog = document.getElementById('chat-log');
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function updateUserStatus(data) {
+        // Could update contact status indicators here
+        console.log('User status update:', data);
+    }
+
+    // Chat selection
+    async function selectContact(contactId, email, name) {
+        currentChat = { type: 'contact', id: contactId, email, name };
+        
+        // Ensure our key pair is loaded into memory (important after refresh)
+        if (E2ECrypto.hasKeys()) {
+            await E2ECrypto.loadKeyPair();
+        }
+        
+        // Clear any derived keys for this conversation (force fresh derivation)
+        const cacheKey = getE2ECacheKey(currentUser.id, contactId);
+        E2ECrypto.clearDerivedKey(cacheKey);
+        
+        // Force fetch public key from server
+        const key = await fetchUserPublicKey(contactId, true);
+        if (!key) {
+            console.warn('Could not get public key for contact:', contactId);
+        }
+        
+        // Update UI
+        document.getElementById('current-chat-name').textContent = name;
+        document.getElementById('current-chat-name').classList.remove('text-slate-400');
+        document.getElementById('current-chat-name').classList.add('text-slate-700');
+        document.getElementById('chat-avatar').classList.remove('hidden');
+        document.getElementById('chat-avatar').classList.remove('bg-orange-100', 'text-orange-600');
+        document.getElementById('chat-avatar').classList.add('bg-slate-200', 'text-slate-500');
+        document.getElementById('chat-avatar').textContent = getInitials(name);
+        document.getElementById('chat-status').classList.remove('hidden');
+        document.getElementById('chat-type-badge').classList.add('hidden');
+        document.getElementById('leave-room-btn').classList.add('hidden');
+        
+        // Update E2E encryption status indicator
+        updateE2EStatus();
+        
+        document.getElementById('placeholder-content').classList.add('hidden');
+        document.getElementById('messages-container').classList.remove('hidden');
+
+        // Load conversation
+        try {
+            const data = await fetchConversation(email);
+            if (data.result) {
+                await renderMessages(data.result);
+            }
+        } catch (error) {
+            console.error('Error loading conversation:', error);
+        }
+
+        // Connect WebSocket
+        connectWebSocket('contact', contactId);
+        renderContacts(); // Update active state
+        renderMessageRequests(); // Update active state
+    }
+
+    async function selectRoom(roomId, roomName) {
+        currentChat = { type: 'room', id: roomId, name: roomName };
+        
+        // Ensure our key pair is loaded into memory (important after refresh)
+        if (E2ECrypto.hasKeys()) {
+            await E2ECrypto.loadKeyPair();
+        }
+        
+        // Update UI
+        document.getElementById('current-chat-name').textContent = `# ${roomName}`;
+        document.getElementById('current-chat-name').classList.remove('text-slate-400');
+        document.getElementById('current-chat-name').classList.add('text-slate-700');
+        document.getElementById('chat-avatar').classList.add('hidden');
+        document.getElementById('chat-status').classList.add('hidden');
+        document.getElementById('chat-type-badge').textContent = 'Room';
+        document.getElementById('chat-type-badge').classList.remove('hidden', 'bg-sky-100', 'text-sky-600', 'bg-orange-100', 'text-orange-600');
+        document.getElementById('chat-type-badge').classList.add('bg-amber-100', 'text-amber-600');
+        document.getElementById('leave-room-btn').classList.remove('hidden');
+        
+        // Initialize E2E encryption for room
+        let hasRoomKey = await initializeRoomKey(roomName);
+        
+        if (!hasRoomKey && E2ECrypto.hasKeys()) {
+            // No room key exists yet, try to generate one (we become the key provider)
+            console.log('Step 2: No room key found, generating new one...');
+            hasRoomKey = await generateAndStoreRoomKey(roomName);
+            console.log('Room key generated:', hasRoomKey);
+        }
+        
+        // Verify the room key is accessible
+        const verifyKey = await E2ECrypto.getRoomKey(roomName);
+        console.log('Step 3: Verify room key exists:', !!verifyKey);
+        console.log('isE2EAvailable:', isE2EAvailable());
+        
+        // If we have the room key, redistribute to any members who don't have it yet
+        if (hasRoomKey) {
+            try {
+                const roomKeyBase64 = E2ECrypto.getRoomKeyBase64(roomName);
+                if (roomKeyBase64) {
+                    console.log('Step 4: Distributing room key to members...');
+                    await distributeRoomKeyToMembers(roomName, roomKeyBase64);
+                }
+            } catch (error) {
+                console.warn('Could not redistribute room key:', error);
+            }
+        }
+        
+        // Update E2E encryption status indicator
+        updateE2EStatus();
+        console.log('=== Room Selection Complete ===');
+        
+        document.getElementById('placeholder-content').classList.add('hidden');
+        document.getElementById('messages-container').classList.remove('hidden');
+
+        // Load conversation
+        try {
+            const data = await fetchRoomConversation(roomName);
+            if (data.result) {
+                await renderMessages(data.result);
+            }
+        } catch (error) {
+            console.error('Error loading room conversation:', error);
+        }
+
+        // Connect WebSocket
+        connectWebSocket('room', roomName);
+        renderRooms(); // Update active state
+        renderMessageRequests(); // Update active state
+    }
+
+    async function selectMessageRequest(requestId, email, name) {
+        currentChat = { type: 'request', id: requestId, email, name };
+        
+        // Ensure our key pair is loaded into memory (important after refresh)
+        if (E2ECrypto.hasKeys()) {
+            await E2ECrypto.loadKeyPair();
+        }
+        
+        // Clear any derived keys for this conversation (force fresh derivation)
+        const cacheKey = getE2ECacheKey(currentUser.id, requestId);
+        E2ECrypto.clearDerivedKey(cacheKey);
+        
+        // Force fetch public key from server
+        const key = await fetchUserPublicKey(requestId, true);
+        if (!key) {
+            console.warn('Could not get public key for requester:', requestId);
+        }
+        
+        // Update UI - similar to contact but with different styling
+        document.getElementById('current-chat-name').textContent = name;
+        document.getElementById('current-chat-name').classList.remove('text-slate-400');
+        document.getElementById('current-chat-name').classList.add('text-slate-700');
+        document.getElementById('chat-avatar').classList.remove('hidden');
+        document.getElementById('chat-avatar').textContent = getInitials(name);
+        document.getElementById('chat-avatar').classList.remove('bg-slate-200', 'text-slate-500');
+        document.getElementById('chat-avatar').classList.add('bg-orange-100', 'text-orange-600');
+        document.getElementById('chat-status').classList.remove('hidden');
+        document.getElementById('chat-type-badge').textContent = 'Request';
+        document.getElementById('chat-type-badge').classList.remove('hidden', 'bg-sky-100', 'text-sky-600', 'bg-amber-100', 'text-amber-600');
+        document.getElementById('chat-type-badge').classList.add('bg-orange-100', 'text-orange-600');
+        document.getElementById('leave-room-btn').classList.add('hidden');
+        
+        // Update E2E encryption status indicator
+        updateE2EStatus();
+        
+        document.getElementById('placeholder-content').classList.add('hidden');
+        document.getElementById('messages-container').classList.remove('hidden');
+
+        // Load conversation
+        try {
+            const data = await fetchConversation(email);
+            if (data.result) {
+                await renderMessages(data.result);
+            }
+        } catch (error) {
+            console.error('Error loading conversation:', error);
+        }
+
+        // Connect WebSocket for messaging
+        connectWebSocket('contact', requestId);
+        renderContacts(); // Update active state
+        renderMessageRequests(); // Update active state
+    }
+
+    async function acceptMessageRequest(userId, nickname) {
+        try {
+            const response = await fetch(`${API_BASE}/contact`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ nickname })
+            });
+
+            const data = await response.json();
+
+            if (response.ok || data.status_code === 201) {
+                // Refresh contacts and message requests
+                await loadContacts();
+                await loadMessageRequests();
+                alert(`${nickname} has been added to your contacts!`);
+            } else {
+                alert(data.message || 'Failed to add contact');
+            }
+        } catch (error) {
+            console.error('Error accepting message request:', error);
+            alert('Connection error. Please try again.');
+        }
+    }
+
+    // Modal handlers
+    function openAddContactModal() {
+        document.getElementById('add-contact-modal').classList.remove('hidden');
+        document.getElementById('contact-nickname').focus();
+    }
+
+    function closeAddContactModal() {
+        document.getElementById('add-contact-modal').classList.add('hidden');
+        document.getElementById('add-contact-form').reset();
+        document.getElementById('contact-error').classList.add('hidden');
+    }
+
+    function openCreateRoomModal() {
+        document.getElementById('create-room-modal').classList.remove('hidden');
+        document.getElementById('room-name').focus();
+    }
+
+    function closeCreateRoomModal() {
+        document.getElementById('create-room-modal').classList.add('hidden');
+        document.getElementById('create-room-form').reset();
+        document.getElementById('room-error').classList.add('hidden');
+    }
+
+    function openSettingsModal() {
+        window.location.href = 'profile.html';
+    }
+
+    // Form handlers
+    document.getElementById('add-contact-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nickname = document.getElementById('contact-nickname').value.trim();
+        const errorDiv = document.getElementById('contact-error');
+
+        // Validate nickname
+        if (!nickname) {
+            errorDiv.textContent = 'Please enter a nickname.';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/contact`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ nickname })
+            });
+
+            const data = await response.json();
+
+            // Check for success - status_code 201 means success
+            const isSuccess = data.status_code === 201;
+            
+            if (isSuccess) {
+                closeAddContactModal();
+                await loadContacts();
+                showToast(`${nickname} added to your contacts!`, 'success');
+            } else {
+                // Handle specific error messages
+                let errorMsg = data.message || data.detail || 'Failed to add contact';
+                
+                // Make error messages more user-friendly
+                if (errorMsg.includes('already exists')) {
+                    errorMsg = `"${nickname}" is already in your contact list.`;
+                } else if (errorMsg.includes('not found') || errorMsg.includes('No user')) {
+                    errorMsg = `No user found with nickname "${nickname}". Please check the spelling.`;
+                } else if (errorMsg.includes('yourself')) {
+                    errorMsg = "You can't add yourself as a contact.";
+                }
+                
+                errorDiv.textContent = errorMsg;
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (error) {
+            errorDiv.textContent = 'Connection error. Please try again.';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('create-room-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const roomName = document.getElementById('room-name').value.toLowerCase().trim();
+        const description = document.getElementById('room-description').value;
+        const joinExisting = document.getElementById('join-existing').checked;
+        const errorDiv = document.getElementById('room-error');
+
+        // Validate room name
+        if (!roomName) {
+            errorDiv.textContent = 'Please enter a room name.';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/room`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    room_name: roomName,
+                    description: description,
+                    join: joinExisting ? 1 : 0
+                })
+            });
+
+            const data = await response.json();
+
+            // Check for success - status_code 200 or 201 means success
+            const isSuccess = data.status_code === 200 || data.status_code === 201;
+            
+            if (isSuccess) {
+                closeCreateRoomModal();
+                await loadRooms();
+                // Show success toast
+                showToast(`Successfully ${joinExisting ? 'joined' : 'created'} room "${roomName}"!`, 'success');
+            } else {
+                // Handle specific error messages
+                let errorMsg = data.message || data.detail || 'Failed to create/join room';
+                
+                // Make error messages more user-friendly
+                if (errorMsg.includes('already exists')) {
+                    errorMsg = `Room "${roomName}" already exists. Check "Join existing room" to join it.`;
+                } else if (errorMsg.includes('not exist')) {
+                    errorMsg = `Room "${roomName}" does not exist. Uncheck "Join existing room" to create it.`;
+                }
+                
+                errorDiv.textContent = errorMsg;
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (error) {
+            errorDiv.textContent = 'Connection error. Please try again.';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('message-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('message-input');
+        const message = input.value.trim();
+
+        if (message && currentChat) {
+            await sendMessage(message);
+            input.value = '';
+        }
+    });
+
+    // File upload configuration
+    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB max
+    const FILE_CATEGORIES = {
+        image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'],
+        video: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'],
+        audio: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'],
+        document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'odt'],
+        archive: ['zip', 'rar', '7z', 'tar', 'gz'],
+        code: ['py', 'js', 'ts', 'html', 'css', 'json', 'xml', 'yaml', 'yml', 'md']
+    };
+
+    function getFileCategory(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        for (const [category, extensions] of Object.entries(FILE_CATEGORIES)) {
+            if (extensions.includes(ext)) return category;
+        }
+        return 'file';
+    }
+
+    function getFileIcon(category) {
+        const icons = {
+            image: `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>`,
+            video: `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>`,
+            audio: `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>`,
+            document: `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>`,
+            archive: `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>`,
+            code: `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>`,
+            file: `<svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>`
+        };
+        return icons[category] || icons.file;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // File upload with preview
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file || !currentChat) {
+            alert('Please select a conversation first');
+            return;
+        }
+
+        // Check file size
+        if (file.size > MAX_FILE_SIZE) {
+            alert(`File size must be less than ${formatFileSize(MAX_FILE_SIZE)}`);
+            event.target.value = '';
+            return;
+        }
+
+        const category = getFileCategory(file.name);
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const base64Full = e.target.result;
+            const base64Data = base64Full.split(',')[1];
+            
+            // Show preview before sending
+            showFilePreview(file, base64Full, category, () => {
+                // User confirmed - send the file with filename
+                sendFileMessage(base64Data, file.name, category);
+            });
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
+    }
+
+    // Send file message with metadata
+    function sendFileMessage(base64Data, filename, category) {
+        if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket not connected');
+            return;
+        }
+
+        const message = {
+            content: base64Data,
+            type: 'file',
+            filename: filename,
+            category: category
+        };
+
+        websocket.send(JSON.stringify(message));
+    }
+
+    // Show file preview modal before sending
+    function showFilePreview(file, base64Full, category, onConfirm) {
+        const isImage = category === 'image';
+        const isVideo = category === 'video';
+        const isAudio = category === 'audio';
+        
+        let previewContent = '';
+        if (isImage) {
+            previewContent = `<img src="${base64Full}" class="max-w-full max-h-64 rounded-lg mx-auto" alt="Preview">`;
+        } else if (isVideo) {
+            previewContent = `<video src="${base64Full}" class="max-w-full max-h-64 rounded-lg mx-auto" controls></video>`;
+        } else if (isAudio) {
+            previewContent = `<audio src="${base64Full}" class="w-full" controls></audio>`;
+        } else {
+            previewContent = `
+                <div class="flex flex-col items-center justify-center p-8 bg-slate-50 rounded-lg">
+                    <div class="text-slate-400 mb-3">${getFileIcon(category)}</div>
+                    <p class="text-slate-600 font-medium">${escapeHtml(file.name)}</p>
+                </div>
+            `;
+        }
+
+        // Create preview modal
+        const modal = document.createElement('div');
+        modal.id = 'file-preview-modal';
+        modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+                <h3 class="text-lg font-bold text-slate-700 mb-4">Send File</h3>
+                <div class="mb-4 max-h-80 overflow-auto rounded-lg">
+                    ${previewContent}
+                </div>
+                <div class="flex items-center justify-between mb-4 p-3 bg-slate-50 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="text-slate-400">${getFileIcon(category)}</div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-700 truncate max-w-[200px]">${escapeHtml(file.name)}</p>
+                            <p class="text-xs text-slate-500">${formatFileSize(file.size)} • ${category.charAt(0).toUpperCase() + category.slice(1)}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button id="cancel-file" class="flex-1 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition font-medium">
+                        Cancel
+                    </button>
+                    <button id="send-file" class="flex-1 px-4 py-2.5 bg-sky-600 text-white rounded-xl hover:bg-sky-700 transition font-medium">
+                        Send
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Handle cancel
+        document.getElementById('cancel-file').onclick = () => {
+            modal.remove();
+        };
+
+        // Handle send
+        document.getElementById('send-file').onclick = () => {
+            modal.remove();
+            onConfirm();
+        };
+
+        // Close on backdrop click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        };
+    }
+
+    // Room management
+    async function leaveRoom() {
+        if (!currentChat || currentChat.type !== 'room') return;
+
+        if (!confirm(`Are you sure you want to leave ${currentChat.name}?`)) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/room`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ room_name: currentChat.name })
+            });
+
+            if (response.ok) {
+                // Reset chat UI
+                currentChat = null;
+                document.getElementById('current-chat-name').textContent = 'Select a conversation';
+                document.getElementById('placeholder-content').classList.remove('hidden');
+                document.getElementById('messages-container').classList.add('hidden');
+                document.getElementById('leave-room-btn').classList.add('hidden');
+                disableMessageInput();
+                
+                if (websocket) websocket.close();
+                await loadRooms();
+            }
+        } catch (error) {
+            console.error('Error leaving room:', error);
+        }
+    }
+
+    // Search
+    async function handleSearch(query) {
+        // Implement search logic - filter contacts and rooms
+        const normalizedQuery = query.toLowerCase();
+        
+        // Filter contacts
+        const filteredContacts = contacts.filter(c => 
+            (c.nickname && c.nickname.toLowerCase().includes(normalizedQuery)) ||
+            c.email.toLowerCase().includes(normalizedQuery)
+        );
+
+        // Filter rooms
+        const filteredRooms = rooms.filter(r =>
+            r.room_name.toLowerCase().includes(normalizedQuery)
+        );
+
+        // Re-render with filtered results
+        // For simplicity, we'll just show/hide items
+        // A more robust implementation would re-render the lists
+    }
+
+    // Logout
+    function logout() {
+        if (confirm("Are you sure you want to sign out?")) {
+            // Stop polling for message requests
+            stopMessageRequestsPolling();
+            
+            // Call logout endpoint to blacklist token
+            fetch(`${API_BASE}/user/logout`, {
+                headers: getAuthHeaders()
+            }).finally(() => {
+                if (websocket) websocket.close();
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('token_type');
+                // Redirect with logout parameter to prevent auto-login
+                window.location.href = 'login.html?logout=true';
+            });
+        }
+    }
+
+    // Data loaders
+    async function loadProfile() {
+        try {
+            const data = await fetchProfile();
+            // Backend returns { user: {...}, status_code, message }
+            currentUser = data.user || data;
+            document.getElementById('my-name').textContent = currentUser.nickname || currentUser.email;
+            document.getElementById('my-avatar').textContent = getInitials(currentUser.nickname || currentUser.email);
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            if (error.message.includes('401')) {
+                window.location.href = 'login.html';
+            }
+        }
+    }
+
+    async function loadContacts() {
+        try {
+            const data = await fetchContacts();
+            contacts = data.result || [];
+            renderContacts();
+            
+            // Preload public keys for all contacts (E2E encryption)
+            const contactIds = contacts.map(c => c.id);
+            if (contactIds.length > 0) {
+                await fetchPublicKeysForUsers(contactIds);
+                savePublicKeysToStorage(); // Persist after bulk fetch
+            }
+        } catch (error) {
+            console.error('Error loading contacts:', error);
+        }
+    }
+
+    async function loadRooms() {
+        try {
+            const data = await fetchRooms();
+            rooms = data.result || [];
+            renderRooms();
+        } catch (error) {
+            console.error('Error loading rooms:', error);
+        }
+    }
+
+    async function loadMessageRequests() {
+        try {
+            const data = await fetchMessageRequests();
+            messageRequests = data.result || [];
+            renderMessageRequests();
+            
+            // Preload public keys for message request senders (E2E encryption)
+            const requestIds = messageRequests.map(r => r.id);
+            if (requestIds.length > 0) {
+                await fetchPublicKeysForUsers(requestIds);
+            }
+        } catch (error) {
+            console.error('Error loading message requests:', error);
+        }
+    }
+
+    // Initialize
+    window.onload = async () => {
+        const token = getToken();
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        await loadProfile();
+        await loadContacts();
+        await loadRooms();
+        await loadMessageRequests();
+
+        // Initialize and verify E2E encryption
+        await initializeE2E();
+
+        // Start polling for message requests every 5 seconds
+        startMessageRequestsPolling();
+        
+        // Request notification permission
+        requestNotificationPermission();
+    };
+
+    // Initialize E2E encryption on page load
+    async function initializeE2E() {
+        console.log('=== E2E Encryption Initialization ===');
+        
+        // Load cached public keys from localStorage
+        loadPublicKeysFromStorage();
+        
+        console.log('Has local keys:', E2ECrypto.hasKeys());
+        
+        if (!E2ECrypto.hasKeys()) {
+            console.warn('No E2E keys found! User should re-login to generate keys.');
+            return;
+        }
+        
+        // Pre-load key pair into memory (important after page reload)
+        try {
+            const keyPair = await E2ECrypto.loadKeyPair();
+            if (keyPair) {
+                console.log('✓ Key pair loaded into memory');
+            } else {
+                console.warn('Failed to load key pair into memory');
+            }
+        } catch (error) {
+            console.error('Error loading key pair:', error);
+        }
+        
+        // Verify our public key is on the server (but DON'T overwrite if different)
+        try {
+            const myPublicKey = E2ECrypto.getStoredPublicKey();
+            const response = await fetch(`${API_BASE}/user/public-key`, {
+                headers: getAuthHeaders()
+            });
+            const data = await response.json();
+            
+            if (!data.public_key) {
+                console.log('Public key not on server. Uploading...');
+                await fetch(`${API_BASE}/user/public-key`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ public_key: myPublicKey })
+                });
+                console.log('✓ Public key uploaded to server');
+            } else if (data.public_key !== myPublicKey) {
+                // Keys don't match - this is a problem!
+                // For now, keep the server key and warn user
+                console.warn('⚠️ Public key mismatch detected!');
+                console.warn('Local key differs from server. Old messages may not decrypt.');
+                console.warn('Updating server with local key...');
+                await fetch(`${API_BASE}/user/public-key`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ public_key: myPublicKey })
+                });
+            } else {
+                console.log('✓ Public key verified on server');
+            }
+        } catch (error) {
+            console.error('E2E initialization error:', error);
+        }
+        
+        console.log('Cached public keys:', Object.keys(publicKeysCache).length);
+        console.log('=== E2E Ready ===');
+    }
+
+    // Start polling for new message requests
+    function startMessageRequestsPolling() {
+        // Clear any existing interval
+        if (messageRequestsInterval) {
+            clearInterval(messageRequestsInterval);
+        }
+        
+        // Poll every 5 seconds for new message requests
+        messageRequestsInterval = setInterval(async () => {
+            try {
+                const data = await fetchMessageRequests();
+                const newRequests = data.result || [];
+                const oldLength = messageRequests.length;
+                
+                // Check if there are changes
+                const hasNewUsers = newRequests.length > oldLength;
+                const hasChanges = JSON.stringify(newRequests.map(r => ({id: r.id, count: r.unread_count}))) !== 
+                                   JSON.stringify(messageRequests.map(r => ({id: r.id, count: r.unread_count})));
+                
+                if (hasChanges || hasNewUsers) {
+                    messageRequests = newRequests;
+                    renderMessageRequests();
+                    
+                    // Show notification if new requests appeared
+                    if (hasNewUsers) {
+                        showNewRequestNotification(newRequests.length - oldLength);
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling message requests:', error);
+            }
+        }, 5000); // 5 seconds
+    }
+
+    // Stop polling (called on logout)
+    function stopMessageRequestsPolling() {
+        if (messageRequestsInterval) {
+            clearInterval(messageRequestsInterval);
+            messageRequestsInterval = null;
+        }
+    }
+
+    // Show notification for new message requests
+    function showNewRequestNotification(count) {
+        // Flash the message requests section
+        const section = document.getElementById('message-requests-section');
+        if (section) {
+            section.classList.add('animate-pulse');
+            setTimeout(() => section.classList.remove('animate-pulse'), 2000);
+        }
+        
+        // Update page title to show notification
+        const originalTitle = document.title;
+        document.title = `(${count} new) ${originalTitle}`;
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 5000);
+        
+        // Optional: Browser notification (if permitted)
+        if (Notification.permission === 'granted') {
+            new Notification('New Message Request', {
+                body: `You have ${count} new message request(s)`,
+                icon: '/favicon.ico'
+            });
+        }
+    }
+
+    // Request notification permission on load
+    function requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+
+    // Handle Enter key in message input
+    document.getElementById('message-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('message-form').dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // Debug function - can be called from browser console
+    window.debugE2E = async function() {
+        console.log('=== E2E Debug Info ===');
+        console.log('Current user:', currentUser?.id, currentUser?.nickname);
+        console.log('Current chat:', currentChat);
+        console.log('Has E2E keys:', E2ECrypto.hasKeys());
+        console.log('My public key:', E2ECrypto.getStoredPublicKey()?.substring(0, 50) + '...');
+        console.log('Public keys cached:', Object.keys(publicKeysCache).length);
+        
+        if (currentChat?.type === 'room') {
+            console.log('--- Room Info ---');
+            console.log('Room name:', currentChat.name);
+            console.log('Has room key:', E2ECrypto.hasRoomKey(currentChat.name));
+            const roomKeyBase64 = E2ECrypto.getRoomKeyBase64(currentChat.name);
+            console.log('Room key in localStorage:', roomKeyBase64?.substring(0, 30) + '...');
+            
+            // Test encryption/decryption
+            if (roomKeyBase64) {
+                try {
+                    const testMessage = 'Test message ' + Date.now();
+                    console.log('Testing encryption...');
+                    const encrypted = await E2ECrypto.encryptForRoom(testMessage, currentChat.name);
+                    const decrypted = await E2ECrypto.decryptFromRoom(encrypted, currentChat.name);
+                    console.log('✓ Room encryption test PASSED');
+                } catch (error) {
+                    console.error('✗ Room encryption test FAILED:', error);
+                }
+            }
+        } else if (currentChat?.type === 'contact' || currentChat?.type === 'request') {
+            console.log('--- Direct Message Info ---');
+            console.log('Other user ID:', currentChat.id);
+            const theirKey = getPublicKey(currentChat.id);
+            console.log('Their public key cached:', !!theirKey);
+            if (theirKey) {
+                console.log('Their key:', theirKey.substring(0, 50) + '...');
+            }
+            
+            // Test encryption/decryption for direct message
+            if (theirKey && E2ECrypto.hasKeys()) {
+                try {
+                    const testMessage = 'Test ' + Date.now();
+                    const cacheKey = getE2ECacheKey(currentUser.id, currentChat.id);
+                    console.log('Cache key:', cacheKey);
+                    const encrypted = await E2ECrypto.encryptFor(testMessage, theirKey, cacheKey);
+                    const decrypted = await E2ECrypto.decryptFrom(encrypted, theirKey, cacheKey);
+                    console.log('✓ Direct message encryption test PASSED');
+                } catch (error) {
+                    console.error('✗ Direct message encryption test FAILED:', error);
+                }
+            }
+        }
+        
+        console.log('isE2EAvailable:', isE2EAvailable());
+        console.log('=== End Debug ===');
+    };
+
+    // Force refresh all keys
+    window.refreshKeys = async function() {
+        console.log('Refreshing all keys...');
+        E2ECrypto.clearAllDerivedKeys();
+        publicKeysCache = {};
+        localStorage.removeItem(PUBLIC_KEYS_STORAGE);
+        
+        if (contacts.length > 0) {
+            const contactIds = contacts.map(c => c.id);
+            await fetchPublicKeysForUsers(contactIds);
+        }
+        
+        console.log('Keys refreshed. Please re-open the chat.');
+    };
+
+    // Clear room keys debug function
+    window.clearRoomKeys = function() {
+        E2ECrypto.clearAllRoomKeys();
+        console.log('All room keys cleared. Refresh the page and re-enter the room.');
+    };
+
+    // Comprehensive fix for E2E issues - run this when messages won't decrypt
+    window.fixE2E = async function() {
+        console.log('=== Attempting to fix E2E encryption ===');
+        
+        // Step 1: Run self-test to verify crypto works
+        console.log('\n1. Running crypto self-test...');
+        const testPassed = await E2ECrypto.selfTest();
+        if (!testPassed) {
+            console.error('Crypto self-test FAILED. This indicates a browser issue.');
+            return false;
+        }
+        
+        // Step 2: Check if we have local keys
+        console.log('\n2. Checking local keys...');
+        if (!E2ECrypto.hasKeys()) {
+            console.error('No local E2E keys found! Please logout and login again.');
+            return false;
+        }
+        const myLocalKey = E2ECrypto.getStoredPublicKey();
+        console.log('Local public key:', myLocalKey?.substring(0, 50) + '...');
+        
+        // Step 3: Check server key
+        console.log('\n3. Checking server public key...');
+        try {
+            const response = await fetch(`${API_BASE}/user/public-key`, {
+                headers: getAuthHeaders()
+            });
+            const data = await response.json();
+            const serverKey = data.public_key;
+            console.log('Server public key:', serverKey?.substring(0, 50) + '...');
+            
+            if (!serverKey) {
+                console.log('No public key on server. Uploading...');
+                await fetch(`${API_BASE}/user/public-key`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ public_key: myLocalKey })
+                });
+                console.log('✓ Public key uploaded');
+            } else if (serverKey !== myLocalKey) {
+                console.warn('⚠️ KEY MISMATCH DETECTED!');
+                console.log('This is the main cause of decryption failures.');
+                console.log('Updating server with local key...');
+                await fetch(`${API_BASE}/user/public-key`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ public_key: myLocalKey })
+                });
+                console.log('✓ Server key updated');
+            } else {
+                console.log('✓ Keys match');
+            }
+        } catch (error) {
+            console.error('Error checking server key:', error);
+        }
+        
+        // Step 4: Clear all caches
+        console.log('\n4. Clearing all caches...');
+        E2ECrypto.clearAllDerivedKeys();
+        publicKeysCache = {};
+        localStorage.removeItem(PUBLIC_KEYS_STORAGE);
+        console.log('✓ Caches cleared');
+        
+        // Step 5: Re-fetch public keys for current contacts
+        console.log('\n5. Re-fetching public keys...');
+        if (contacts.length > 0) {
+            const contactIds = contacts.map(c => c.id);
+            await fetchPublicKeysForUsers(contactIds);
+        }
+        if (messageRequests.length > 0) {
+            const requestIds = messageRequests.map(r => r.id);
+            await fetchPublicKeysForUsers(requestIds);
+        }
+        console.log('✓ Public keys refreshed');
+        
+        console.log('\n=== Fix completed ===');
+        console.log('Please reload the chat window to test decryption.');
+        console.log('If messages still show encrypted, the sender may need to run fixE2E() as well.');
+        return true;
+    };
+
+    // Test encryption between current user and chat partner
+    window.testE2EWithChat = async function() {
+        if (!currentChat || currentChat.type === 'room') {
+            console.log('Open a direct message chat first');
+            return;
+        }
+        
+        console.log('=== Testing E2E with', currentChat.name, '===');
+        
+        const theirKey = getPublicKey(currentChat.id);
+        if (!theirKey) {
+            console.log('Fetching their public key...');
+            await fetchUserPublicKey(currentChat.id, true);
+        }
+        
+        const theirPublicKey = getPublicKey(currentChat.id);
+        const myPublicKey = E2ECrypto.getStoredPublicKey();
+        
+        console.log('My public key (first 40):', myPublicKey?.substring(0, 40));
+        console.log('Their public key (first 40):', theirPublicKey?.substring(0, 40));
+        
+        if (!theirPublicKey) {
+            console.error('Could not get their public key. They may not have E2E set up.');
+            return;
+        }
+        
+        try {
+            const testMsg = 'Test ' + Date.now();
+            const cacheKey = getE2ECacheKey(currentUser.id, currentChat.id);
+            
+            console.log('Encrypting test message...');
+            const encrypted = await E2ECrypto.encryptFor(testMsg, theirPublicKey, cacheKey);
+            console.log('Encrypted:', encrypted.substring(0, 50) + '...');
+            
+            console.log('Decrypting (this should work since we used same derived key)...');
+            const decrypted = await E2ECrypto.decryptFrom(encrypted, theirPublicKey, cacheKey);
+            console.log('Decrypted:', decrypted);
+            
+            if (decrypted === testMsg) {
+                console.log('✓ Local encryption test PASSED');
+                console.log('\nNOTE: This only tests that YOUR keys work.');
+                console.log('If messages from the other user are encrypted, THEY may need to run fixE2E()');
+            }
+        } catch (error) {
+            console.error('✗ Encryption test FAILED:', error);
+        }
+    };
+</script>
+</body>
+</html>

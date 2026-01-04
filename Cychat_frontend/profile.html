@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cy Chat - Profile Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="static/js/e2e-crypto.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="chat.html" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </a>
+                <h1 class="text-xl font-bold text-slate-800">Profile Settings</h1>
+            </div>
+            <button onclick="logout()" class="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition font-medium text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Sign Out
+            </button>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- Alert Messages -->
+        <div id="success-alert" class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="success-message" class="text-green-700 font-medium"></span>
+            </div>
+        </div>
+
+        <div id="error-alert" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="error-message" class="text-red-700 font-medium"></span>
+            </div>
+        </div>
+
+        <!-- Profile Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <!-- Profile Header -->
+            <div class="bg-gradient-to-r from-sky-500 to-sky-600 p-8">
+                <div class="flex flex-col sm:flex-row items-center gap-6">
+                    <!-- Profile Image -->
+                    <div class="relative group">
+                        <div id="profile-avatar" class="w-28 h-28 rounded-full bg-white flex items-center justify-center text-sky-600 text-3xl font-bold shadow-lg border-4 border-white overflow-hidden">
+                            <span id="avatar-initials">??</span>
+                            <img id="avatar-image" src="" alt="" class="hidden w-full h-full object-cover">
+                        </div>
+                        <label class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                            <input type="file" id="profile-image-input" accept="image/*" class="hidden" onchange="uploadProfileImage(event)">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </label>
+                    </div>
+                    <!-- Profile Info -->
+                    <div class="text-center sm:text-left">
+                        <h2 id="profile-name" class="text-2xl font-bold text-white">Loading...</h2>
+                        <p id="profile-email" class="text-sky-100">loading@example.com</p>
+                        <span class="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-white/20 rounded-full text-sm text-white">
+                            <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                            Online
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Form -->
+            <form id="profile-form" class="p-6 space-y-6">
+                <div class="grid sm:grid-cols-2 gap-6">
+                    <!-- Nickname -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Display Name</label>
+                        <input type="text" id="input-nickname" maxlength="40"
+                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition"
+                            placeholder="Your display name">
+                        <p class="text-xs text-slate-400 mt-1">This is how others will see you</p>
+                    </div>
+
+                    <!-- Email (Read-only) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+                        <input type="email" id="input-email" readonly
+                            class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed">
+                        <p class="text-xs text-slate-400 mt-1">Email cannot be changed</p>
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
+                        <input type="tel" id="input-phone"
+                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition"
+                            placeholder="+20 123 456 7890">
+                    </div>
+
+                    <!-- User Role (Read-only) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Account Type</label>
+                        <input type="text" id="input-role" readonly
+                            class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500 cursor-not-allowed capitalize">
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" id="save-profile-btn"
+                        class="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl transition shadow-md hover:shadow-lg flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="p-6 border-b border-slate-100">
+                <h3 class="text-lg font-bold text-slate-800">Change Password</h3>
+                <p class="text-slate-500 text-sm">Update your password to keep your account secure</p>
+            </div>
+
+            <form id="password-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Current Password</label>
+                    <div class="relative">
+                        <input type="password" id="current-password" required
+                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition pr-12"
+                            placeholder="Enter current password">
+                        <button type="button" onclick="togglePasswordVisibility('current-password')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">New Password</label>
+                    <div class="relative">
+                        <input type="password" id="new-password" required minlength="8"
+                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition pr-12"
+                            placeholder="Enter new password (min 8 chars)">
+                        <button type="button" onclick="togglePasswordVisibility('new-password')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Confirm New Password</label>
+                    <div class="relative">
+                        <input type="password" id="confirm-new-password" required
+                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent transition pr-12"
+                            placeholder="Confirm new password">
+                        <button type="button" onclick="togglePasswordVisibility('confirm-new-password')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button type="submit" id="change-password-btn"
+                        class="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition shadow-md hover:shadow-lg flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Update Password
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- E2E Encryption Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="p-6 border-b border-slate-100 bg-gradient-to-r from-green-50 to-emerald-50">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">End-to-End Encryption</h3>
+                        <p class="text-slate-500 text-sm">Your messages are secured with AES-256 encryption</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <!-- Encryption Status -->
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <span id="e2e-status-icon" class="w-3 h-3 bg-green-500 rounded-full"></span>
+                        <div>
+                            <p id="e2e-status-text" class="font-medium text-slate-700">Encryption Active</p>
+                            <p class="text-xs text-slate-400">Your private key is stored securely in this browser</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Your Fingerprint -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Your Security Fingerprint</label>
+                    <div class="p-4 bg-slate-100 rounded-xl font-mono text-center tracking-widest text-slate-600" id="my-fingerprint">
+                        Loading...
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2 text-center">
+                        Share this with contacts to verify your identity. If it changes unexpectedly, it may indicate a security issue.
+                    </p>
+                </div>
+
+                <!-- Regenerate Keys Button -->
+                <div class="pt-2">
+                    <button onclick="regenerateKeys()" id="regenerate-keys-btn"
+                        class="w-full px-4 py-3 border-2 border-dashed border-slate-300 text-slate-600 hover:border-sky-500 hover:text-sky-600 font-medium rounded-xl transition flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Regenerate Encryption Keys
+                    </button>
+                    <p class="text-xs text-amber-600 mt-2 text-center">
+                        ⚠️ Warning: This will make previous encrypted messages unreadable
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="bg-white rounded-2xl shadow-sm border border-red-200 overflow-hidden">
+            <div class="p-6 border-b border-red-100 bg-red-50">
+                <h3 class="text-lg font-bold text-red-800">Danger Zone</h3>
+                <p class="text-red-600 text-sm">Irreversible and destructive actions</p>
+            </div>
+
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-semibold text-slate-800">Delete Account</h4>
+                        <p class="text-slate-500 text-sm">Permanently delete your account and all data</p>
+                    </div>
+                    <button onclick="confirmDeleteAccount()" 
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition">
+                        Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-6 text-center">
+        <p class="text-slate-400 text-sm">
+            Cy Chat • SQL Server Edition • Secured by Cy-Server
+        </p>
+    </footer>
+
+<script>
+    // Configuration
+    const API_BASE = 'http://localhost:8000/api/v1';
+    
+    // State
+    let currentUser = null;
+
+    // Auth helpers
+    function getToken() {
+        return localStorage.getItem('access_token');
+    }
+
+    function getAuthHeaders() {
+        return {
+            'Authorization': `Bearer ${getToken()}`,
+            'Content-Type': 'application/json'
+        };
+    }
+
+    // UI Helpers
+    function getInitials(name) {
+        if (!name) return '??';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    function showSuccess(message) {
+        const alert = document.getElementById('success-alert');
+        document.getElementById('success-message').textContent = message;
+        alert.classList.remove('hidden');
+        document.getElementById('error-alert').classList.add('hidden');
+        setTimeout(() => alert.classList.add('hidden'), 5000);
+    }
+
+    function showError(message) {
+        const alert = document.getElementById('error-alert');
+        document.getElementById('error-message').textContent = message;
+        alert.classList.remove('hidden');
+        document.getElementById('success-alert').classList.add('hidden');
+        setTimeout(() => alert.classList.add('hidden'), 5000);
+    }
+
+    function togglePasswordVisibility(inputId) {
+        const input = document.getElementById(inputId);
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    // API Calls
+    async function fetchProfile() {
+        const response = await fetch(`${API_BASE}/user/profile`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to fetch profile');
+        return await response.json();
+    }
+
+    async function updateProfile(data) {
+        const response = await fetch(`${API_BASE}/user/profile`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return await response.json();
+    }
+
+    async function resetPassword(oldPassword, newPassword, confirmPassword) {
+        const response = await fetch(`${API_BASE}/user/reset-password`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                old_password: oldPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            })
+        });
+        return { ok: response.ok, data: await response.json() };
+    }
+
+    // Upload profile image
+    async function uploadProfileImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(`${API_BASE}/user/profile-image`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                showSuccess('Profile image updated successfully');
+                // Reload profile to get new image
+                await loadProfile();
+            } else {
+                const data = await response.json();
+                showError(data.message || 'Failed to upload image');
+            }
+        } catch (error) {
+            showError('Failed to upload image');
+        }
+    }
+
+    // Load profile data
+    async function loadProfile() {
+        try {
+            currentUser = await fetchProfile();
+            
+            // Update header
+            document.getElementById('profile-name').textContent = currentUser.nickname || 'No name set';
+            document.getElementById('profile-email').textContent = currentUser.email;
+            document.getElementById('avatar-initials').textContent = getInitials(currentUser.nickname || currentUser.email);
+            
+            // Update form
+            document.getElementById('input-nickname').value = currentUser.nickname || '';
+            document.getElementById('input-email').value = currentUser.email;
+            document.getElementById('input-phone').value = currentUser.phone_number || '';
+            document.getElementById('input-role').value = currentUser.user_role || 'user';
+
+            // Load profile image if exists
+            if (currentUser.profile_picture) {
+                const img = document.getElementById('avatar-image');
+                img.src = `${API_BASE}/user/profile-image/${currentUser.id}`;
+                img.classList.remove('hidden');
+                document.getElementById('avatar-initials').classList.add('hidden');
+            }
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            showError('Failed to load profile');
+            
+            // Redirect to login if unauthorized
+            if (error.message.includes('401')) {
+                window.location.href = 'login.html';
+            }
+        }
+    }
+
+    // Form handlers
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = document.getElementById('save-profile-btn');
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Saving...';
+
+        try {
+            const data = {
+                nickname: document.getElementById('input-nickname').value.trim(),
+                phone_number: document.getElementById('input-phone').value.trim() || null
+            };
+
+            const result = await updateProfile(data);
+            
+            if (result.status_code === 200 || result.id) {
+                showSuccess('Profile updated successfully');
+                await loadProfile();
+            } else {
+                showError(result.message || 'Failed to update profile');
+            }
+        } catch (error) {
+            showError('Failed to update profile');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    });
+
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-new-password').value;
+
+        if (newPassword !== confirmPassword) {
+            showError('New passwords do not match');
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            showError('New password must be at least 8 characters');
+            return;
+        }
+
+        const btn = document.getElementById('change-password-btn');
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Updating...';
+
+        try {
+            const { ok, data } = await resetPassword(currentPassword, newPassword, confirmPassword);
+            
+            if (ok || data.status_code === 200) {
+                showSuccess('Password updated successfully');
+                document.getElementById('password-form').reset();
+            } else {
+                showError(data.message || 'Failed to update password');
+            }
+        } catch (error) {
+            showError('Failed to update password');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    });
+
+    // Delete account
+    function confirmDeleteAccount() {
+        if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
+            if (confirm('This will permanently delete all your data, messages, and contacts. Type "DELETE" to confirm.')) {
+                const input = prompt('Type DELETE to confirm:');
+                if (input === 'DELETE') {
+                    deleteAccount();
+                }
+            }
+        }
+    }
+
+    async function deleteAccount() {
+        // Note: This endpoint may not exist in the current backend
+        // You would need to implement it
+        showError('Account deletion is not yet implemented');
+    }
+
+    // Logout
+    function logout() {
+        fetch(`${API_BASE}/user/logout`, {
+            headers: getAuthHeaders()
+        }).finally(() => {
+            localStorage.removeItem('access_token');
+            window.location.href = 'login.html';
+        });
+    }
+
+    // E2E Encryption Functions
+    async function loadEncryptionStatus() {
+        const statusIcon = document.getElementById('e2e-status-icon');
+        const statusText = document.getElementById('e2e-status-text');
+        const fingerprintEl = document.getElementById('my-fingerprint');
+        
+        try {
+            if (E2ECrypto.hasKeys()) {
+                // Keys exist - show active status
+                statusIcon.classList.remove('bg-red-500', 'bg-yellow-500');
+                statusIcon.classList.add('bg-green-500');
+                statusText.textContent = 'Encryption Active';
+                
+                // Generate and display fingerprint
+                const publicKey = E2ECrypto.getStoredPublicKey();
+                if (publicKey) {
+                    const fingerprint = await E2ECrypto.generateFingerprint(publicKey);
+                    fingerprintEl.textContent = fingerprint;
+                } else {
+                    fingerprintEl.textContent = 'Unable to generate fingerprint';
+                }
+            } else {
+                // No keys - show warning
+                statusIcon.classList.remove('bg-green-500', 'bg-yellow-500');
+                statusIcon.classList.add('bg-red-500');
+                statusText.textContent = 'No Encryption Keys';
+                fingerprintEl.textContent = 'Keys not found - please regenerate';
+            }
+        } catch (error) {
+            console.error('Error loading encryption status:', error);
+            statusIcon.classList.remove('bg-green-500');
+            statusIcon.classList.add('bg-yellow-500');
+            statusText.textContent = 'Encryption Error';
+            fingerprintEl.textContent = 'Error loading fingerprint';
+        }
+    }
+
+    async function regenerateKeys() {
+        if (!confirm('Are you sure you want to regenerate your encryption keys?\n\nWARNING: This will make all your previous encrypted messages unreadable!')) {
+            return;
+        }
+        
+        const btn = document.getElementById('regenerate-keys-btn');
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Regenerating...';
+        
+        try {
+            // Clear existing keys
+            E2ECrypto.clearKeys();
+            
+            // Generate new keys
+            const { publicKey } = await E2ECrypto.initialize();
+            
+            // Upload new public key to server
+            await fetch(`${API_BASE}/user/public-key`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ public_key: publicKey })
+            });
+            
+            showSuccess('Encryption keys regenerated successfully');
+            await loadEncryptionStatus();
+        } catch (error) {
+            console.error('Error regenerating keys:', error);
+            showError('Failed to regenerate encryption keys');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    }
+
+    // Initialize
+    window.onload = async () => {
+        const token = getToken();
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+        await loadProfile();
+        await loadEncryptionStatus();
+    };
+</script>
+</body>
+</html>
