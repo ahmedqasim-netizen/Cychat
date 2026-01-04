@@ -1,4 +1,4 @@
-A real-time chat application with end-to-end encryption, built with FastAPI and vanilla JavaScript.
+CyChat is a real-time chat application with end-to-end encryption, built with FastAPI and vanilla JavaScript.
 
 ## What's This?
 
@@ -19,7 +19,6 @@ The backend runs on FastAPI with SQL Server, and the frontend is plain HTML/CSS/
 - Python 3.11+ with FastAPI
 - SQLAlchemy (async) for database access
 - SQL Server
-- Redis for pub/sub (optional—falls back to in-memory if unavailable)
 - JWT authentication with bcrypt password hashing
 - Prometheus metrics built-in
 
@@ -145,7 +144,6 @@ All settings go in `.env`:
 | `DB_NAME` | `ChatDB` | Database name |
 | `DB_USERNAME` | (empty) | Leave empty for Windows Auth |
 | `DB_PASSWORD` | (empty) | Leave empty for Windows Auth |
-| `REDIS_HOST` | `localhost` | Redis server (optional) |
 | `JWT_SECRET_KEY` | (change this!) | Secret for signing tokens |
 | `DEBUG` | `info` | Set to empty string for production |
 | `CORS_ORIGINS` | (see template) | Allowed frontend origins |
